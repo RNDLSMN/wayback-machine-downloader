@@ -79,6 +79,7 @@ async function directDownload() {
   document.getElementById('progressErrors').innerHTML = '';
   document.getElementById('progressSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
   connectSSE();
+  document.getElementById('cancelBtn').style.display = 'inline-block';
 
   try {
     const pages = [{
@@ -241,6 +242,7 @@ async function startDownload() {
   }, 100);
 
   connectSSE();
+  document.getElementById('cancelBtn').style.display = 'inline-block';
 
   try {
     const res = await fetch('/api/download', {
@@ -299,9 +301,21 @@ function updateProgress(data) {
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) downloadBtn.disabled = false;
     bar.classList.add('done');
+    document.getElementById('cancelBtn').style.display = 'none';
     if (eventSource) { eventSource.close(); eventSource = null; }
     loadDownloads();
     toast('Download selesai! 🎉', 'success');
+  }
+
+  if (data.status === 'cancelled') {
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) downloadBtn.disabled = false;
+    bar.style.background = '#ef4444';
+    bar.classList.add('done');
+    document.getElementById('cancelBtn').style.display = 'none';
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    loadDownloads();
+    toast('Download dibatalkan', 'info');
   }
 
   // Show errors
@@ -309,6 +323,17 @@ function updateProgress(data) {
     errorsDiv.innerHTML = data.errors.map(e =>
       `<div class="error-item">❌ ${e.url}: ${e.error}</div>`
     ).join('');
+  }
+}
+
+// ========== CANCEL DOWNLOAD ==========
+async function cancelDownload() {
+  try {
+    const res = await fetch('/api/cancel', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+  } catch (err) {
+    toast('Gagal membatalkan: ' + err.message, 'error');
   }
 }
 

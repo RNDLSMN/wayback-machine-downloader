@@ -76,7 +76,11 @@
       </div>
       <div class="progress-info">
         <span id="progressText">0 / 0</span>
-        <span id="progressStatus">Idle</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="progressStatus">Idle</span>
+          <button class="btn btn-sm btn-danger" id="cancelBtn" onclick="cancelDownload()" style="display:none">✕
+            Batalkan</button>
+        </div>
       </div>
       <div class="progress-current" id="progressCurrent"></div>
       <div class="progress-errors" id="progressErrors"></div>

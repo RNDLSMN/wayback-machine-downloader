@@ -85,6 +85,16 @@ app.post('/api/download', async (req, res) => {
   }
 });
 
+// Batalkan download
+app.post('/api/cancel', (req, res) => {
+  if (!activeDownloader || activeDownloader.progress.status !== 'downloading') {
+    return res.status(400).json({ error: 'Tidak ada download yang berjalan' });
+  }
+
+  activeDownloader.cancel();
+  res.json({ message: 'Download dibatalkan' });
+});
+
 // SSE endpoint untuk progress
 app.get('/api/progress', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
