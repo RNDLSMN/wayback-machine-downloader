@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wayback HTML Machine</title>
-  <meta name="description" content="Download halaman web dari Wayback Machine secara otomatis lengkap dengan semua aset">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕰️</text></svg>">
+  <title>Wayback HTML Machine — VNDAL</title>
+  <meta name="description"
+    content="Download halaman web dari Wayback Machine secara otomatis lengkap dengan semua aset">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕰️</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
@@ -15,16 +19,19 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <h1>🕰️ Wayback HTML Machine</h1>
+      <div class="brand-badge">VNDAL</div>
+      <h1>Wayback HTML Machine</h1>
       <p class="subtitle">Download halaman web dari Wayback Machine secara otomatis</p>
     </div>
 
     <!-- Input Section -->
     <div class="card input-section">
       <div class="input-row">
-        <input type="text" id="urlInput" placeholder="Paste URL... (contoh: example.com atau https://web.archive.org/web/2024.../https://...)">
+        <input type="text" id="urlInput"
+          placeholder="Paste URL... (contoh: example.com atau https://web.archive.org/web/2024.../https://...)">
         <button class="btn btn-primary" id="scanBtn" onclick="startScan()">🔍 Scan</button>
-        <button class="btn btn-download" id="directBtn" onclick="directDownload()" style="display:none">⬇ Download Langsung</button>
+        <button class="btn btn-download" id="directBtn" onclick="directDownload()" style="display:none">⬇ Download
+          Langsung</button>
       </div>
       <div class="input-row options-row">
         <label>Dari:</label>
@@ -45,7 +52,8 @@
         </div>
         <div class="section-controls">
           <button class="btn btn-sm btn-primary" onclick="selectAll()">✓ Pilih Semua</button>
-          <button class="btn btn-sm btn-primary" onclick="deselectAll()" style="background: linear-gradient(135deg, #6b7280, #4b5563); box-shadow: none;">✗ Hapus Semua</button>
+          <button class="btn btn-sm btn-primary" onclick="deselectAll()"
+            style="background: linear-gradient(135deg, #6b7280, #4b5563); box-shadow: none;">✗ Hapus Semua</button>
           <button class="btn btn-download" id="downloadBtn" onclick="startDownload()">⬇ Download Terpilih</button>
         </div>
       </div>
@@ -84,10 +92,13 @@
 
     <!-- Footer -->
     <div class="footer">
-      <p>Wayback HTML Machine v1.0 — <a href="https://github.com/RNDLSMN/wayback-machine-downloader" target="_blank">GitHub ↗</a></p>
+      <p class="footer-brand">⚡ VNDAL</p>
+      <p>Wayback HTML Machine v1.0 — <a href="https://github.com/RNDLSMN/wayback-machine-downloader"
+          target="_blank">GitHub ↗</a></p>
     </div>
   </div>
 
   <script src="app.js"></script>
 </body>
+
 </html>
