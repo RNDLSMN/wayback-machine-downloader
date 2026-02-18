@@ -130,6 +130,23 @@ app.get('/api/downloads', (req, res) => {
   }
 });
 
+// Delete site
+app.delete('/api/downloads/:domain', (req, res) => {
+  const domain = req.params.domain.replace(/[^a-zA-Z0-9._-]/g, '');
+  const siteDir = path.join(DOWNLOADS_DIR, domain);
+
+  if (!fs.existsSync(siteDir)) {
+    return res.status(404).json({ error: 'Site tidak ditemukan' });
+  }
+
+  try {
+    fs.rmSync(siteDir, { recursive: true, force: true });
+    res.json({ message: `${domain} berhasil dihapus` });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menghapus: ' + err.message });
+  }
+});
+
 // Download sebagai ZIP
 app.get('/api/zip/:domain', (req, res) => {
   const domain = req.params.domain.replace(/[^a-zA-Z0-9._-]/g, '');
@@ -156,7 +173,7 @@ app.get('/api/zip/:domain', (req, res) => {
     stream.pipe(res);
     stream.on('end', () => {
       // Hapus zip setelah dikirim
-      try { fs.unlinkSync(zipPath); } catch {}
+      try { fs.unlinkSync(zipPath); } catch { }
     });
   } catch (err) {
     res.status(500).json({ error: 'Gagal membuat ZIP: ' + err.message });

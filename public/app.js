@@ -2,11 +2,24 @@ let scannedPages = [];
 let eventSource = null;
 let parsedWayback = null;
 
-// Deteksi Wayback URL saat user mengetik/paste
+// ========== TOAST NOTIFICATIONS ==========
+function toast(message, type = 'info', duration = 3500) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  container.appendChild(el);
+
+  setTimeout(() => {
+    el.classList.add('removing');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+// ========== WAYBACK URL DETECTION ==========
 document.getElementById('urlInput').addEventListener('input', async (e) => {
   const url = e.target.value.trim();
   const directBtn = document.getElementById('directBtn');
-  const infoEl = document.getElementById('waybackInfo');
 
   if (url.match(/^https?:\/\/web\.archive\.org\/web\/\d+/)) {
     try {
@@ -22,7 +35,7 @@ document.getElementById('urlInput').addEventListener('input', async (e) => {
         showWaybackInfo(data);
         return;
       }
-    } catch {}
+    } catch { }
   }
 
   parsedWayback = null;
@@ -35,19 +48,16 @@ function showWaybackInfo(data) {
   if (!infoEl) {
     infoEl = document.createElement('div');
     infoEl.id = 'waybackInfo';
-    infoEl.style.cssText = 'margin-top:10px;padding:10px 14px;background:#0d2818;border:1px solid #00ff88;border-radius:6px;font-size:13px;color:#aaa;';
+    infoEl.className = 'wayback-info';
     document.querySelector('.input-section').appendChild(infoEl);
   }
   const ts = data.timestamp;
-  const date = `${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)} ${ts.slice(8,10)}:${ts.slice(10,12)}:${ts.slice(12,14)}`;
+  const date = `${ts.slice(0, 4)}-${ts.slice(4, 6)}-${ts.slice(6, 8)} ${ts.slice(8, 10)}:${ts.slice(10, 12)}:${ts.slice(12, 14)}`;
   infoEl.innerHTML = `
-    <span style="color:#00ff88;font-weight:600">Wayback URL terdeteksi!</span><br>
-    <span style="color:#ccc">URL Asli:</span> ${data.originalUrl}<br>
-    <span style="color:#ccc">Timestamp:</span> ${date}<br>
-    <span style="color:#ccc">Domain:</span> ${data.domain}<br>
-    <span style="color:#888;font-size:11px;margin-top:4px;display:block">
-      Klik <b>Download Langsung</b> untuk download halaman ini + semua asset-nya, atau <b>Scan</b> untuk cari semua halaman di domain ini.
-    </span>
+    <span class="label">Wayback URL terdeteksi!</span><br>
+    URL Asli: <strong>${data.originalUrl}</strong><br>
+    Timestamp: <strong>${date}</strong> · Domain: <strong>${data.domain}</strong>
+    <span class="hint">Klik <b>Download Langsung</b> untuk download halaman ini + semua asset, atau <b>Scan</b> untuk cari semua halaman.</span>
   `;
   infoEl.style.display = 'block';
 }
@@ -57,9 +67,9 @@ function hideWaybackInfo() {
   if (infoEl) infoEl.style.display = 'none';
 }
 
-// Direct download - langsung download 1 halaman dari Wayback URL
+// ========== DIRECT DOWNLOAD ==========
 async function directDownload() {
-  if (!parsedWayback) return alert('URL Wayback tidak valid');
+  if (!parsedWayback) return toast('URL Wayback tidak valid', 'error');
 
   const directBtn = document.getElementById('directBtn');
   directBtn.disabled = true;
@@ -67,6 +77,7 @@ async function directDownload() {
 
   document.getElementById('progressSection').classList.add('visible');
   document.getElementById('progressErrors').innerHTML = '';
+  document.getElementById('progressSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
   connectSSE();
 
   try {
@@ -83,18 +94,19 @@ async function directDownload() {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+    toast('Download dimulai!', 'success');
   } catch (err) {
-    alert('Download gagal: ' + err.message);
+    toast('Download gagal: ' + err.message, 'error');
   } finally {
     directBtn.disabled = false;
-    directBtn.textContent = 'Download Langsung';
+    directBtn.textContent = '⬇ Download Langsung';
   }
 }
 
-// Scan domain
+// ========== SCAN DOMAIN ==========
 async function startScan() {
   const url = document.getElementById('urlInput').value.trim();
-  if (!url) return alert('Masukkan URL terlebih dahulu');
+  if (!url) return toast('Masukkan URL terlebih dahulu', 'error');
   localStorage.setItem('lastUrl', url);
 
   const scanBtn = document.getElementById('scanBtn');
@@ -124,16 +136,23 @@ async function startScan() {
     renderPages(data.pages);
 
     document.getElementById('pagesSection').classList.add('visible');
-    document.getElementById('pagesCount').textContent = `${data.pages.length} halaman ditemukan di ${data.domain}`;
+    document.getElementById('pagesCount').textContent = `${data.pages.length.toLocaleString()} halaman di ${data.domain}`;
+    document.getElementById('pageSearch').value = '';
+    toast(`Ditemukan ${data.pages.length.toLocaleString()} halaman di ${data.domain}`, 'success');
+
+    // Scroll to pages
+    setTimeout(() => {
+      document.getElementById('pagesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   } catch (err) {
-    alert('Scan gagal: ' + err.message);
+    toast('Scan gagal: ' + err.message, 'error');
   } finally {
     scanBtn.disabled = false;
-    scanBtn.textContent = 'Scan';
+    scanBtn.textContent = '🔍 Scan';
   }
 }
 
-// Render daftar halaman
+// ========== RENDER PAGES ==========
 function renderPages(pages) {
   const list = document.getElementById('pagesList');
   list.innerHTML = '';
@@ -141,29 +160,64 @@ function renderPages(pages) {
   pages.forEach((page, i) => {
     const item = document.createElement('div');
     item.className = 'page-item';
+    item.dataset.url = (page.original || '').toLowerCase();
 
     const ts = page.timestamp;
-    const formattedDate = ts ? `${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)}` : '';
+    const formattedDate = ts ? `${ts.slice(0, 4)}-${ts.slice(4, 6)}-${ts.slice(6, 8)}` : '';
 
     item.innerHTML = `
-      <input type="checkbox" id="page_${i}" checked data-index="${i}">
+      <input type="checkbox" id="page_${i}" checked data-index="${i}" onchange="updateStats()">
       <span class="url">${page.original}</span>
       <span class="mimetype">${page.mimetype || ''}</span>
       <span class="timestamp">${formattedDate}</span>
     `;
     list.appendChild(item);
   });
+
+  updateStats();
+}
+
+// ========== SEARCH / FILTER PAGES ==========
+function filterPages() {
+  const query = document.getElementById('pageSearch').value.toLowerCase().trim();
+  const items = document.querySelectorAll('#pagesList .page-item');
+
+  items.forEach(item => {
+    const url = item.dataset.url || '';
+    if (!query || url.includes(query)) {
+      item.classList.remove('hidden');
+    } else {
+      item.classList.add('hidden');
+    }
+  });
+
+  updateStats();
+}
+
+// ========== STATS ==========
+function updateStats() {
+  const all = document.querySelectorAll('#pagesList .page-item');
+  const visible = document.querySelectorAll('#pagesList .page-item:not(.hidden)');
+  const checked = document.querySelectorAll('#pagesList input[type="checkbox"]:checked');
+
+  document.getElementById('statTotal').textContent = all.length.toLocaleString();
+  document.getElementById('statSelected').textContent = checked.length.toLocaleString();
+  document.getElementById('statVisible').textContent = visible.length.toLocaleString();
 }
 
 function selectAll() {
-  document.querySelectorAll('#pagesList input[type="checkbox"]').forEach(cb => cb.checked = true);
+  document.querySelectorAll('#pagesList .page-item:not(.hidden) input[type="checkbox"]').forEach(cb => cb.checked = true);
+  updateStats();
+  toast('Semua halaman dipilih', 'info');
 }
 
 function deselectAll() {
   document.querySelectorAll('#pagesList input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateStats();
+  toast('Semua pilihan dihapus', 'info');
 }
 
-// Start download
+// ========== START DOWNLOAD ==========
 async function startDownload() {
   const selected = [];
   document.querySelectorAll('#pagesList input[type="checkbox"]:checked').forEach(cb => {
@@ -171,7 +225,7 @@ async function startDownload() {
     selected.push(scannedPages[idx]);
   });
 
-  if (selected.length === 0) return alert('Pilih minimal 1 halaman');
+  if (selected.length === 0) return toast('Pilih minimal 1 halaman', 'error');
 
   const downloadBtn = document.getElementById('downloadBtn');
   downloadBtn.disabled = true;
@@ -179,8 +233,13 @@ async function startDownload() {
   // Show progress
   document.getElementById('progressSection').classList.add('visible');
   document.getElementById('progressErrors').innerHTML = '';
+  document.getElementById('progressBar').classList.remove('done');
 
-  // Connect SSE
+  // Smooth scroll
+  setTimeout(() => {
+    document.getElementById('progressSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+
   connectSSE();
 
   try {
@@ -192,13 +251,14 @@ async function startDownload() {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+    toast(`Download ${selected.length.toLocaleString()} halaman dimulai!`, 'success');
   } catch (err) {
-    alert('Download gagal: ' + err.message);
+    toast('Download gagal: ' + err.message, 'error');
     downloadBtn.disabled = false;
   }
 }
 
-// SSE Progress
+// ========== SSE PROGRESS ==========
 function connectSSE() {
   if (eventSource) eventSource.close();
 
@@ -208,7 +268,6 @@ function connectSSE() {
     updateProgress(data);
   };
   eventSource.onerror = () => {
-    // Reconnect setelah 2 detik
     setTimeout(() => {
       if (eventSource) eventSource.close();
       connectSSE();
@@ -225,13 +284,13 @@ function updateProgress(data) {
 
   const percent = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
   bar.style.width = percent + '%';
-  text.textContent = `${data.done} / ${data.total} (${percent}%)`;
+  text.textContent = `${data.done.toLocaleString()} / ${data.total.toLocaleString()} (${percent}%)`;
 
   const statusMap = {
-    'idle': 'Idle',
-    'downloading': 'Downloading...',
-    'rewriting': 'Rewriting links...',
-    'done': 'Selesai!'
+    'idle': '⏸ Idle',
+    'downloading': '⬇️ Downloading...',
+    'rewriting': '🔄 Rewriting links...',
+    'done': '✅ Selesai!'
   };
   status.textContent = statusMap[data.status] || data.status;
   current.textContent = data.current || '';
@@ -239,20 +298,21 @@ function updateProgress(data) {
   if (data.status === 'done') {
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) downloadBtn.disabled = false;
-    bar.style.background = '#00ff88';
+    bar.classList.add('done');
     if (eventSource) { eventSource.close(); eventSource = null; }
     loadDownloads();
+    toast('Download selesai! 🎉', 'success');
   }
 
   // Show errors
   if (data.errors && data.errors.length > 0) {
     errorsDiv.innerHTML = data.errors.map(e =>
-      `<div class="error-item">${e.url}: ${e.error}</div>`
+      `<div class="error-item">❌ ${e.url}: ${e.error}</div>`
     ).join('');
   }
 }
 
-// Load daftar download
+// ========== LOAD DOWNLOADS ==========
 async function loadDownloads() {
   try {
     const res = await fetch('/api/downloads');
@@ -265,21 +325,56 @@ async function loadDownloads() {
     }
 
     list.innerHTML = data.sites.map(site => `
-      <div class="download-item">
+      <div class="download-item" id="dl-${site.domain.replace(/\./g, '-')}">
         <div>
           <span class="domain">${site.domain}</span>
-          <span class="files-count">${site.files} files</span>
+          <span class="files-count">${site.files.toLocaleString()} files</span>
         </div>
-        <div style="display:flex;gap:6px">
-          <a href="${site.path}/index.html" target="_blank" class="btn btn-sm btn-primary">Buka</a>
-          <a href="/api/zip/${site.domain}" class="btn btn-sm btn-download">ZIP</a>
+        <div class="download-actions">
+          <a href="${site.path}/index.html" target="_blank" class="btn btn-sm btn-primary">🔗 Buka</a>
+          <a href="/api/zip/${site.domain}" class="btn btn-sm btn-download">📦 ZIP</a>
+          <button class="btn btn-sm btn-danger btn-icon" onclick="deleteSite('${site.domain}')" title="Hapus">🗑</button>
         </div>
       </div>
     `).join('');
   } catch { /* skip */ }
 }
 
-// Enter key untuk scan
+// ========== DELETE SITE ==========
+async function deleteSite(domain) {
+  if (!confirm(`Hapus semua file untuk ${domain}?`)) return;
+
+  try {
+    const res = await fetch(`/api/downloads/${encodeURIComponent(domain)}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    // Animate removal
+    const el = document.getElementById(`dl-${domain.replace(/\./g, '-')}`);
+    if (el) {
+      el.style.transition = 'all 0.3s ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(20px)';
+      setTimeout(() => el.remove(), 300);
+    }
+
+    toast(`${domain} dihapus`, 'success');
+
+    // Reload if empty
+    setTimeout(() => {
+      const remaining = document.querySelectorAll('.download-item');
+      if (remaining.length === 0) {
+        document.getElementById('downloadsList').innerHTML = '<div class="empty-state">Belum ada download</div>';
+      }
+    }, 350);
+  } catch (err) {
+    toast('Gagal menghapus: ' + err.message, 'error');
+  }
+}
+
+// ========== KEYBOARD SHORTCUTS ==========
 document.getElementById('urlInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     if (parsedWayback) {
@@ -290,24 +385,32 @@ document.getElementById('urlInput').addEventListener('keydown', (e) => {
   }
 });
 
-// === Saat halaman dibuka ===
+// Ctrl/Cmd+A inside pages list -> select all visible
+document.getElementById('pagesList')?.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    e.preventDefault();
+    selectAll();
+  }
+});
 
-// Restore URL terakhir dari localStorage
+// ========== INIT ==========
+
+// Restore last URL
 const savedUrl = localStorage.getItem('lastUrl');
 if (savedUrl) {
   document.getElementById('urlInput').value = savedUrl;
   document.getElementById('urlInput').dispatchEvent(new Event('input'));
 }
 
-// Simpan URL setiap kali berubah
+// Save URL on change
 document.getElementById('urlInput').addEventListener('change', (e) => {
   localStorage.setItem('lastUrl', e.target.value.trim());
 });
 
-// Load daftar download
+// Load downloads list
 loadDownloads();
 
-// Auto-reconnect progress jika ada download yang masih jalan
+// Auto-reconnect if download is active
 (async function checkActiveDownload() {
   try {
     const es = new EventSource('/api/progress');
@@ -316,7 +419,6 @@ loadDownloads();
       if (data.status === 'downloading' || data.status === 'rewriting') {
         document.getElementById('progressSection').classList.add('visible');
         updateProgress(data);
-        // Ganti ke SSE permanen
         if (eventSource) eventSource.close();
         eventSource = es;
       } else if (data.status === 'done' && data.done > 0) {
@@ -328,5 +430,5 @@ loadDownloads();
       }
     };
     es.onerror = () => es.close();
-  } catch {}
+  } catch { }
 })();
